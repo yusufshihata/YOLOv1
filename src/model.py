@@ -74,6 +74,9 @@ class Yolov1(nn.Module):
             nn.init.kaiming_normal_(m.weights, mode='fan-out', nonlinearity='leaky_relu')
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weights)
+            nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         x = self.darknet(x)
