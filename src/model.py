@@ -41,6 +41,8 @@ class Yolov1(nn.Module):
         self.dropout = nn.Dropout(0.5)
         self.fc2 = nn.Linear(4096, S * S * (B * 5 + C))
 
+        self._init_weights()
+
     def _create_dark_net(self):
         layers = []
         in_channels = self.input_dim
@@ -66,6 +68,12 @@ class Yolov1(nn.Module):
                 layers.append(nn.MaxPool2d(kernel_size=kernel_size, stride=stride))
 
         return nn.Sequential(*layers)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_normal_(m.weights, mode='fan-out', nonlinearity='leaky_relu')
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         x = self.darknet(x)
