@@ -38,3 +38,22 @@ def IOU(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
     iou = intersection / torch.clamp(union, min=1e-6)
 
     return iou
+
+def save_model(model, optimizer, epoch, loss, path="best_model.pth"):
+    """
+    Saves the model state if it's the best so far.
+
+    Args:
+        model (torch.nn.Module): The model to save.
+        optimizer (torch.optim.Optimizer): The optimizer state.
+        epoch (int): The current epoch.
+        loss (float): The best loss so far.
+        path (str): Path to save the model file.
+    """
+    torch.save({
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss': loss
+    }, path)
+    print(f"✅ Model saved at epoch {epoch} with loss {loss:.4f} -> {path}")
