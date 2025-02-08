@@ -4,28 +4,35 @@ import config
 from dataset import VOCDataset
 from torch.utils.data import DataLoader
 
-def train(model, criterion, optimizer):
-    trainloader = DataLoader(VOCDataset(), batch_size=config.BATCH_SIZE, shuffle=True)
+def train(model, criterion, optimizer, dataloader):
     model.train()
-    total_loss = 0.0
+    
     for epoch in range(config.EPOCHS):
-        for images, targets in trainloader:
-            images = images.to(config.DEVICE)
+        total_loss = 0.0  # Reset loss at start of each epoch
+        
+        for images, targets in dataloader:
+            images, targets = images.to(config.DEVICE), targets.to(config.DEVICE)
 
             optimizer.zero_grad()
 
             pred = model(images)
 
+            # Ensure correct shape
+            pred = pred.view(-1, config.S, config.S, (config.B * 5 + config.C))
+            targets = targets.view(-1, config.S, config.S, (5 + config.C))
+
             loss = criterion(pred, targets)
-
             loss.backward()
-
             optimizer.step()
             
             total_loss += loss.item()
         
-        total_loss /= len(trainloader)
-        
-        print(f"EPOCH: [{epoch}/{config.EPOCHS}], Loss = {total_loss}")
+        avg_loss = total_loss / len(dataloader)
+        print(f"EPOCH: [{epoch+1}/{config.EPOCHS}], Loss = {avg_loss:.4f}")
 
-train(config.model, config.criterion, config.optimizer)
+# Initialize Dataset and Dataloader
+train_dataset = VOCDataset(split="train")  # Ensure split is provided
+trainloader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
+
+# Run Training
+train(config.model, config.criterion, config.optimizer, trainloader)
