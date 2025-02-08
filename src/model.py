@@ -1,33 +1,9 @@
 import torch
 import torch.nn as nn
-
-architecture = [
-    ("conv", [64, 7, 2, 3]),  # Conv1: (filters, kernel_size, stride, padding)
-    ("maxpool", [2, 2]),      # MaxPool1: (kernel_size, stride)
-    ("conv", [192, 3, 1, 1]),
-    ("maxpool", [2, 2]),
-    ("conv", [128, 1, 1, 0]),
-    ("conv", [256, 3, 1, 1]),
-    ("conv", [256, 1, 1, 0]),
-    ("conv", [512, 3, 1, 1]),
-    ("maxpool", [2, 2]),
-    
-    ("conv", [256, 1, 1, 0]),
-    ("conv", [512, 3, 1, 1]),
-    ("conv", [256, 1, 1, 0]),
-    ("conv", [512, 3, 1, 1]),
-    ("conv", [512, 1, 1, 0]),
-    ("conv", [1024, 3, 1, 1]),
-    ("maxpool", [2, 2]),
-    
-    ("conv", [1024, 3, 1, 1]),
-    ("conv", [1024, 3, 2, 1]),
-    ("conv", [1024, 3, 1, 1]),
-    ("conv", [1024, 3, 1, 1]),
-]
+from config import architecture
 
 class Yolov1(nn.Module):
-    def __init__(self, architecture, input_dim=3, B=2, S=7, C=20):
+    def __init__(self, architecture=architecture, input_dim=3, B=2, S=7, C=20):
         super(Yolov1, self).__init__()
         self.input_dim = input_dim
         self.B = B
@@ -77,7 +53,6 @@ class Yolov1(nn.Module):
         elif isinstance(m, nn.Linear):
             nn.init.xavier_uniform_(m.weight)
             nn.init.constant_(m.bias, 0)
-
 
     def forward(self, x):
         x = self.darknet(x)

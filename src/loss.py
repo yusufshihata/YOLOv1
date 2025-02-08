@@ -15,51 +15,88 @@ class YoloLoss(nn.Module):
         self.mse = nn.MSELoss(reduction='sum')
         self.ce = nn.CrossEntropyLoss()
 
-    def forward(self, pred, gt):
-        batch_size = config.BATCH_SIZE
+    def forward(self, pred: torch.Tensor, gt: torch.Tensor) -> float:
+        """
+        Computes the YOLOv1 loss function based on localization, confidence, and classification errors.
 
-        gt = gt.view(batch_size, self.S, self.S, 5 + self.C)
-        pred = pred.view(batch_size, self.S, self.S, (self.B * 5 + self.C))
+        Args:
+            pred (torch.tensor): The model's predictions with shape (batch_size, S, S, B*5 + C).
+                                Contains bounding box coordinates, confidence scores, and class probabilities.
+            gt (torch.tensor): The ground truth labels with shape (batch_size, S, S, B*5 + C).
+                            Contains true bounding boxes, object presence, and class labels.
 
-        obj_mask = gt[..., 4] == 1
-        noobj_mask = gt[..., 4] == 0
+        Returns:
+            float: The total loss computed as a sum of localization loss, confidence loss, and classification loss.
 
-        pred_boxes = pred[..., :self.B * 5].view(batch_size, self.S, self.S, self.B, 5)
-        pred_classes = pred[..., self.B * 5:]
+        Breakdown of the loss computation:
+        1. **Reshape Inputs**:
+        - The predictions and ground truth are reshaped to extract bounding boxes, confidence scores, and class labels.
+        
+        2. **Compute IOU & Assign Best Bounding Box**:
+        - Intersection over Union (IOU) is computed for each predicted bounding box against the ground truth.
+        - The best bounding box for each cell is selected based on the highest IOU.
 
-        gt_box = gt[..., :5]
-        gt_class = gt[..., 5:]
+        3. **Create Masks for Object Presence**:
+        - `obj_mask`: Identifies grid cells where an object is present, selecting the best bounding box.
+        - `noobj_mask`: Identifies grid cells where no object is present.
 
-        iou_box1 = IOU(pred_boxes[..., 0, :], gt_box)
-        iou_box2 = IOU(pred_boxes[..., 1, :], gt_box)
+        4. **Compute Localization Loss**:
+        - Penalizes errors in predicted box coordinates `(x, y, w, h)`.
+        - Uses Mean Squared Error (MSE) loss.
+        - Width and height are square-rooted to reduce the impact of large values.
 
-        iou_max, best_box = torch.max(torch.stack([iou_box1, iou_box2], dim=0), dim=0)
+        5. **Compute Confidence Loss**:
+        - Penalizes incorrect objectness scores.
+        - Two losses: one for cells containing objects (`obj_mask`), another for cells without objects (`noobj_mask`).
 
-        best_pred_box = torch.gather(pred_boxes, 3, best_box.unsqueeze(-1).expand(-1, -1, -1, 5)).squeeze(3)
+        6. **Compute Classification Loss**:
+        - Uses CrossEntropyLoss to measure classification error for object-containing cells.
 
-        coord_loss = (
-            self.mse(best_pred_box[obj_mask][..., :2], gt_box[obj_mask][..., :2]) +
-            self.mse(torch.sqrt(best_pred_box[obj_mask][..., 2:4].clamp(1e-6)), torch.sqrt(gt_box[obj_mask][..., 2:4].clamp(1e-6)))
+        7. **Compute Total Loss**:
+        - Combines all losses with weighting factors (`lambda_coord` for localization, `lambda_noobj` for confidence loss in no-object cells).
+        - Normalized by batch size.
+
+        Returns:
+            The final loss value for the batch.
+        """
+        pred = pred.view(-1, self.S, self.S, (self.B * 5 + self.C))
+        gt = gt.view(-1, self.S, self.S, (self.B * 5 + self.C))
+
+        # Split predictions
+        pred_boxes = pred[..., :self.B * 5].view(-1, self.S, self.S, self.B, 5)
+        pred_class = pred[..., self.B * 5:]
+
+        # Get ground truth
+        gt_boxes = gt[..., :self.B * 5].view(-1, self.S, self.S, self.B, 5)
+        gt_confidence = gt_boxes[..., 4]
+        gt_class = gt[..., self.B * 5:]
+
+        # Compute IOU
+        ious = IOU(pred_boxes[..., :4], gt_boxes[..., :4])  # Compute IOUs for all boxes at once
+        _, best_box = torch.max(ious, dim=-1)
+
+        # Masks
+        obj_mask = torch.zeros_like(pred_boxes[..., 0], dtype=torch.bool)
+        for b in range(self.B):
+            obj_mask[..., b] = (best_box == b) & (gt_confidence > 0)
+        noobj_mask = gt_confidence == 0
+
+        # Localization loss
+        xy_loss = self.mse(pred_boxes[..., :2][obj_mask], gt_boxes[..., :2][obj_mask])
+        wh_loss = self.mse(
+            torch.sqrt(torch.clamp(pred_boxes[..., 2:4][obj_mask], min=1e-6)),
+            torch.sqrt(torch.clamp(gt_boxes[..., 2:4][obj_mask], min=1e-6))
         )
+        loc_loss = self.lambda_coord * (xy_loss + wh_loss)
 
-        empty_confidence_loss = self.mse(
-            pred_boxes[noobj_mask][..., 4], torch.zeros_like(pred_boxes[noobj_mask][..., 4])
-        )
+        # Confidence loss
+        obj_conf_loss = self.mse(pred_boxes[..., 4][obj_mask], gt_confidence[obj_mask])
+        noobj_conf_loss = self.mse(pred_boxes[..., 4][noobj_mask], torch.zeros_like(pred_boxes[..., 4][noobj_mask]))
+        conf_loss = obj_conf_loss + self.lambda_noobj * noobj_conf_loss
 
-        non_empty_confidence_loss = self.mse(
-            best_pred_box[obj_mask][..., 4], gt_box[obj_mask][..., 4]
-        )
+        # Classification loss
+        class_loss = self.ce(pred_class[gt_confidence > 0], gt_class[gt_confidence > 0].argmax(-1))
 
-        classification_loss = self.ce(
-            pred_classes[obj_mask].view(-1, self.C),
-            gt_class[obj_mask].argmax(dim=-1)
-        )
-
-        total_loss = (
-            self.lambda_coord * coord_loss +
-            non_empty_confidence_loss +
-            self.lambda_noobj * empty_confidence_loss +
-            classification_loss
-        )
-
+        # Total loss
+        total_loss = (loc_loss + conf_loss + class_loss) / pred.size(0)
         return total_loss

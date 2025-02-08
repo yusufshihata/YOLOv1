@@ -1,8 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from model import Yolov1
-from loss import YoloLoss
 import config
 from dataset import VOCDataset
 from torch.utils.data import DataLoader
