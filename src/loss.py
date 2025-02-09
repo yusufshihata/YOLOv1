@@ -4,7 +4,7 @@ import config
 from utils import IOU
 
 class YoloLoss(nn.Module):
-    def __init__(self, lambda_coord=5, lambda_noobj=0.5, S=7, B=2, C=20):
+    def __init__(self, lambda_coord=10, lambda_noobj=0.25, S=7, B=2, C=20):
         super(YoloLoss, self).__init__()
         self.lambda_coord = lambda_coord
         self.lambda_noobj = lambda_noobj
@@ -27,37 +27,6 @@ class YoloLoss(nn.Module):
 
         Returns:
             float: The total loss computed as a sum of localization loss, confidence loss, and classification loss.
-
-        Breakdown of the loss computation:
-        1. **Reshape Inputs**:
-        - The predictions and ground truth are reshaped to extract bounding boxes, confidence scores, and class labels.
-        
-        2. **Compute IOU & Assign Best Bounding Box**:
-        - Intersection over Union (IOU) is computed for each predicted bounding box against the ground truth.
-        - The best bounding box for each cell is selected based on the highest IOU.
-
-        3. **Create Masks for Object Presence**:
-        - `obj_mask`: Identifies grid cells where an object is present, selecting the best bounding box.
-        - `noobj_mask`: Identifies grid cells where no object is present.
-
-        4. **Compute Localization Loss**:
-        - Penalizes errors in predicted box coordinates `(x, y, w, h)`.
-        - Uses Mean Squared Error (MSE) loss.
-        - Width and height are square-rooted to reduce the impact of large values.
-
-        5. **Compute Confidence Loss**:
-        - Penalizes incorrect objectness scores.
-        - Two losses: one for cells containing objects (`obj_mask`), another for cells without objects (`noobj_mask`).
-
-        6. **Compute Classification Loss**:
-        - Uses CrossEntropyLoss to measure classification error for object-containing cells.
-
-        7. **Compute Total Loss**:
-        - Combines all losses with weighting factors (`lambda_coord` for localization, `lambda_noobj` for confidence loss in no-object cells).
-        - Normalized by batch size.
-
-        Returns:
-            The final loss value for the batch.
         """
         pred = pred.view(-1, self.S, self.S, (self.B * 5 + self.C))
         gt = gt.view(-1, self.S, self.S, (self.B * 5 + self.C))
