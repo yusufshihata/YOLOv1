@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 from torchvision import transforms as T
-from model import Yolov1
+from src.model import Yolov1
 from loss import YoloLoss
 
 

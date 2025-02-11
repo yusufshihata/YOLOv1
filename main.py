@@ -1,5 +1,5 @@
 import argparse
-from dataset import VOCDataset
+from src.dataset import VOCDataset
 from torch.utils.data import DataLoader
 import config
 from train import train

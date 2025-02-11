@@ -5,8 +5,9 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from config import DEVICE, IMAGE_SIZE, transformation
-from utils import decode_predictions, non_max_suppression, load_checkpoint
+from utils import decode_bbox, non_max_suppression, load_checkpoint
 
+@torch.no_grad()
 def predict(image_path: str, model: nn.Module, conf_threshold: float = 0.5, iou_threshold: float = 0.4) -> None:
     """
     Runs inference on an image using the YOLOv1 model.
@@ -28,11 +29,10 @@ def predict(image_path: str, model: nn.Module, conf_threshold: float = 0.5, iou_
     img_tensor = transformation(image).unsqueeze(0).to(DEVICE)  # Add batch dimension
     
     # Run inference
-    with torch.no_grad():
-        pred = model(img_tensor)
+    pred = model(img_tensor)
     
     # Decode and filter predictions
-    bboxes = decode_predictions(pred, conf_threshold)
+    bboxes = decode_bbox(pred, conf_threshold)
     filtered_bboxes = non_max_suppression(bboxes, iou_threshold)
     
     # Plot image with predictions

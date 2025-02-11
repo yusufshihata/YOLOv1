@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.datasets import VOCDetection
 import torchvision.transforms as T
-import config
+from config import S, B, C
 from PIL import Image
 
 class VOCDataset(Dataset):
@@ -27,7 +27,6 @@ class VOCDataset(Dataset):
         width = int(annotation['annotation']['size']['width'])
         height = int(annotation['annotation']['size']['height'])
 
-        S, B, C = config.S, config.B, config.C
         label = torch.zeros((S, S, B * 5 + C))
 
         objects = annotation['annotation']['object']
@@ -49,8 +48,8 @@ class VOCDataset(Dataset):
             ymax = int(bbox['ymax'])
 
             # Convert bbox to YOLO format
-            x_center = (xmin + xmax) / 2.0 / width
-            y_center = (ymin + ymax) / 2.0 / height
+            x_center = (xmin + xmax) / (2.0 * width)
+            y_center = (ymin + ymax) / (2.0 * height)
             bbox_width = (xmax - xmin) / width
             bbox_height = (ymax - ymin) / height
 

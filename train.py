@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
-import config
-from dataset import VOCDataset
+from config import EPOCHS, DEVICE
 from torch.utils.data import DataLoader
 from validate import validate
 from visualize import plot_metrics
-from utils import save_model, compute_map, decode_predictions
+from utils import save_model, compute_map, decode_bbox
 from torch.optim.lr_scheduler import StepLR
 
 def train(
@@ -23,13 +22,14 @@ def train(
 
     scheduler = StepLR(optimizer, step_size=10, gamma=0.5)
 
-    for epoch in range(config.EPOCHS):
+    for epoch in range(EPOCHS):
         total_loss = 0.0
         all_pred_boxes = []
         all_true_boxes = []
 
         for images, targets in trainloader:
-            images, targets = images.to(config.DEVICE), targets.to(config.DEVICE)
+            images, targets = images.to(DEVICE), targets.to(DEVICE)
+
             optimizer.zero_grad()
 
             pred = model(images)
@@ -40,8 +40,8 @@ def train(
             total_loss += loss.item()
 
             # Convert predictions & targets to bounding boxes format
-            pred_boxes = decode_predictions(pred)
-            true_boxes = decode_predictions(targets)
+            pred_boxes = decode_bbox(pred)
+            true_boxes = decode_bbox(targets)
             
             all_pred_boxes.extend(pred_boxes)
             all_true_boxes.extend(true_boxes)
@@ -53,7 +53,7 @@ def train(
         epoch_map = compute_map(all_pred_boxes, all_true_boxes)
         all_maps.append(epoch_map)
 
-        print(f"EPOCH [{epoch+1}/{config.EPOCHS}] - Loss: {avg_loss:.4f} - mAP: {epoch_map:.4f}")
+        print(f"EPOCH [{epoch+1}/{EPOCHS}] - Loss: {avg_loss:.4f} - mAP: {epoch_map:.4f}")
 
         # Run validation step
         _, valid_map = validate(model, criterion, validloader)
