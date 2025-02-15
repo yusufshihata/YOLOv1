@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import cv2
 import PIL
-from ..config import DEVICE, S, B, C, IMAGE_SIZE
+from ..config.config import DEVICE, S, B, C, IMAGE_SIZE
 
 def IOU(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
     """
@@ -84,6 +84,9 @@ def decode_bbox(predictions: torch.Tensor, conf_threshold: float = 0.5):
     # Ensure predictions are reshaped correctly
     if predictions.dim() == 2:  # If it's flattened (batch_size, num_features)
         batch_size = predictions.shape[0]
+        S = 7  # Assuming YOLOv1 (SxS grid = 7x7)
+        B = 2  # Number of bounding boxes per cell
+        C = 20  # Number of classes
         predictions = predictions.view(batch_size, S, S, B*5 + C)
 
     batch_size, S, S, _ = predictions.shape  # Now this should work
@@ -106,10 +109,11 @@ def decode_bbox(predictions: torch.Tensor, conf_threshold: float = 0.5):
 
     return all_boxes
 
+
 def compute_map(pred_boxes, true_boxes, iou_threshold=0.5):
     """
     Computes Mean Average Precision (mAP) at given IoU threshold.
-    
+
     Args:
         pred_boxes (list): List of predicted boxes [x, y, w, h, class, conf].
         true_boxes (list): List of ground truth boxes.
@@ -154,13 +158,13 @@ def save_model(model: nn.Module, optimizer: torch.optim, epoch: int, loss: nn.Mo
         'lr': optimizer.param_groups[0]['lr'],
         'betas': optimizer.param_groups[0]['betas'],
     }, path)
-    print(f"✅ Model saved at epoch {epoch} with loss {loss:.4f} -> {path}")
+    print(f"✅ Model saved at epoch {epoch} with mAP {loss:.4f} -> {path}")
 
 
 def load_checkpoint(model: nn.Module, path: str = "best_model.pth", optimizer: torch.optim = None) -> nn.Module:
     """
     Loads a model state to do inference on it
-    
+
     Args:
         model: the model we need to do inference on
         path: the path for the trained model state_dict

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from config import architecture
+from config.config import architecture
 
 class Yolov1(nn.Module):
     """
