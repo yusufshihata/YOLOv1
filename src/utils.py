@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import cv2
 import PIL
-from ..config.config import DEVICE, S, B, C, IMAGE_SIZE
+from config.config import DEVICE, S, B, C, IMAGE_SIZE
 
 def IOU(boxes1: torch.Tensor, boxes2: torch.Tensor) -> torch.Tensor:
     """

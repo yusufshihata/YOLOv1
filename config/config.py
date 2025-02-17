@@ -1,8 +1,6 @@
 import torch
 import torch.optim as optim
 from torchvision import transforms as T
-from src.model import Yolov1
-from src.loss import YoloLoss
 
 architecture = [
     ("conv", [32, 3, 1, 1]),    # Initial stem conv
@@ -76,7 +74,3 @@ transformation = T.Compose([
     T.ToTensor(),
     T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
-
-model = Yolov1()
-criterion = YoloLoss()
-optimizer = optim.Adam(model.parameters(), lr=LR, betas=BETAS)

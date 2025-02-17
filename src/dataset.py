@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.datasets import VOCDetection
 import torchvision.transforms as T
-from config import S, B, C
+from config.config import S, B, C
 from PIL import Image
 
 class VOCDataset(Dataset):

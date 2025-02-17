@@ -1,6 +1,9 @@
 import argparse
 import torch
-from config.config import model, criterion, optimizer, DEVICE, BATCH_SIZE, NUM_WORKERS
+import torch.optim as optim
+from config.config import DEVICE, BATCH_SIZE, NUM_WORKERS, LR, BETAS
+from src.model import Yolov1
+from src.loss import YoloLoss
 from src.dataset import VOCDataset
 from train.train import train
 from train.validate import validate
@@ -8,6 +11,11 @@ from inference.inference import predict
 from torch.utils.data import DataLoader
 
 def main():
+    model = Yolov1()
+    criterion = YoloLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LR, betas=BETAS)
+
+
     parser = argparse.ArgumentParser(description="YOLOv1 Training & Inference")
     parser.add_argument("mode", choices=["train", "validate", "inference"], help="Choose mode: train, validate, or inference")
     parser.add_argument("--image", type=str, help="Path to an image for inference (required in inference mode)")
