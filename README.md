@@ -8,7 +8,7 @@ This project is a reimplementation of the original YOLOv1 (You Only Look Once) o
 - Fully reimplemented from scratch
 - Trained on the Pascal VOC dataset
 - Custom loss function based on the original YOLOv1 formulation
-- Supports training and evaluation with visualization tools
+- Supports training, validation, and inference
 
 ## Installation
 ```sh
@@ -23,17 +23,17 @@ pip install -r requirements.txt
 ## Usage
 ### Training
 ```sh
-python train.py --epochs 100 --batch_size 32 --lr 0.001
+python main.py train --checkpoint path/to/checkpoint.pth
 ```
 
-### Evaluation
+### Validation
 ```sh
-python evaluate.py --weights path/to/weights.pth
+python main.py validate --checkpoint path/to/checkpoint.pth
 ```
 
 ### Inference
 ```sh
-python detect.py --image path/to/image.jpg --weights path/to/weights.pth
+python main.py inference --image path/to/image.jpg --checkpoint path/to/checkpoint.pth
 ```
 
 ## Model Architecture
@@ -47,8 +47,8 @@ Below is the training progress graph showing the loss and mAP (Mean Average Prec
 ![Training Progress](./output/output.png)
 
 ## Results
-| Metric  | Value  |
-|---------|--------|
+| Metric  | Value |
+|---------|-------|
 | mAP     | 51.44% |
 | Loss    | 0.1049 |
 
